@@ -1,7 +1,5 @@
 from fastapi import FastAPI
 from utils.ask import askRequest, askResponse
-from utils.getinfos import getinfo
-from prompt.prompt import bbobbi_prompt
 APP = FastAPI()
 
 APP.middleware(
@@ -16,5 +14,5 @@ async def ask(req: askRequest):
     return askResponse(text=req.text)
 
 @APP.get("/ai/info")
-def getinfo(species, name, age, disease):
-    return {"species": species, "name": name, "age": age, "disease": disease}
+def getinfo(userid: str, species: str, name: str, age: int, disease: str):
+    return {'user': userid, 'species': species, 'name': name, 'age': age, 'disease': disease}
