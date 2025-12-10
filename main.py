@@ -16,7 +16,7 @@ def health():
 
 @APP.post("/ai/ask", response_model=askResponse)
 async def ask(req: askRequest):
-    return askResponse(text=req.text)
+    return askResponse(text = req.text)
 
 @APP.get("/ai/info")
 def getinfo(userid: str, species: str, name: str, age: int, disease: str):
