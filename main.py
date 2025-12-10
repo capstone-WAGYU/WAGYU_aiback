@@ -1,9 +1,14 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from utils.ask import askRequest, askResponse
 APP = FastAPI()
 
-APP.middleware(
-    middleware_type='CORS'
+APP.add_middleware(
+    CORSMiddleware,
+    allow_origins= ["*"],
+    allow_credentials = True,
+    allow_methods = ['*'],
+    allow_headers = ['*']
 )
 @APP.get("/")
 def health():
