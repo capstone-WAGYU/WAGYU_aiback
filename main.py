@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from utils.ask import askRequest, askResponse
-from utils.getinfos import getinfo
 APP = FastAPI()
 
 APP.middleware(
@@ -15,6 +14,5 @@ async def ask(req: askRequest):
     return askResponse(text=req.text)
 
 @APP.get("/ai/info")
-def getinfo(req: getinfo):
-    # API명세서 보고 진행
-    pass
+def getinfo(userid: str, species: str, name: str, age: int, disease: str):
+    return {'user': userid, 'species': species, 'name': name, 'age': age, 'disease': disease}
