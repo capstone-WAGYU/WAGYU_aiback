@@ -2,6 +2,20 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from utils.ask import askRequest, askResponse
 from llama_cpp import Llama
+import sqlite3
+
+conn = sqlite3.connect('userinfo.db')
+cursor = conn.cursor()
+
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS userinfo (
+            userid INTEGER PRIMARY KEY AUTOINCREMENT,
+            species TEXT,
+            name TEXT,
+            age INTEGER,
+            disease TEXT)
+'''); conn.commit()
+
 APP = FastAPI()
 APP.add_middleware(
     CORSMiddleware,
@@ -27,5 +41,9 @@ async def ask(req: askRequest):
     return askResponse(text = answer)
 
 @APP.get("/ai/info")
-def getinfo(userid: str, species: str, name: str, age: int, disease: str):
+def getinfo(userid: int, species: str, name: str, age: int, disease: str):
+
+    conn.execute('''
+INSERT INTO userinfo (userid, species, name, age, disease) VALUES (?, ?, ?, ?, ?)'''); conn.commit()
+
     return {'user': userid, 'species': species, 'name': name, 'age': age, 'disease': disease}
