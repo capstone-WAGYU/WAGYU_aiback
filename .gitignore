@@ -2,3 +2,4 @@
 __pycache__/
 utils/__pycache__/
 model/qwen2.5_merged-q4_k_m.gguf
+userinfo.db

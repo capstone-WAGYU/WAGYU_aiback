@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from utils.ask import askRequest, askResponse
+from utils.threadupdate import threadUpdate
 from llama_cpp import Llama
 import sqlite3
 
@@ -42,8 +43,29 @@ async def ask(req: askRequest):
 
 @APP.get("/ai/info")
 def getinfo(userid: int, species: str, name: str, age: int, disease: str):
-
-    conn.execute('''
-INSERT INTO userinfo (userid, species, name, age, disease) VALUES (?, ?, ?, ?, ?)'''); conn.commit()
+    conn = threadUpdate()
+    cursor = conn.cursor()
+    cursor.execute('''
+    INSERT INTO userinfo (userid, species, name, age, disease) VALUES (?, ?, ?, ?, ?)''', (userid, species, name, age, disease)); conn.commit(); conn.close()
 
     return {'user': userid, 'species': species, 'name': name, 'age': age, 'disease': disease}
+
+@APP.get('/ai/findname')
+def findbydogname(name: str):
+    conn = threadUpdate()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT userid, species, name, age, disease FROM userinfo WHERE name = ?', (name,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if row is None:
+        return {'status': 'Not Found'}
+    
+    return {
+        "userid": row[0], 
+        'species': row[1],
+        'name': row[2],
+        'age': row[3],
+        'disease': row[4]
+    }
