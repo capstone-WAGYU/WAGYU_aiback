@@ -26,9 +26,10 @@ APP.add_middleware(
     allow_headers = ['*']
 )
 LLM = Llama(
-    model_path="./model/qwen2.5_merged-q4_k_m.gguf", 
+    model_path="./models/capstone-q4-k-m.gguf", 
     n_ctx = 4096, 
-    n_gpu_layers= -1
+    n_gpu_layers= 24,
+    verbose = True
 )
 @APP.get("/")
 def health():
