@@ -2,20 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from utils.ask import askRequest, askResponse
 from utils.threadupdate import threadUpdate
+from prompt.prompt import bbobbi_prompt
 from llama_cpp import Llama
-import sqlite3
-
-conn = sqlite3.connect('userinfo.db')
-cursor = conn.cursor()
-
-cursor.execute('''
-CREATE TABLE IF NOT EXISTS userinfo (
-            userid INTEGER PRIMARY KEY AUTOINCREMENT,
-            species TEXT,
-            name TEXT,
-            age INTEGER,
-            disease TEXT)
-'''); conn.commit()
 
 APP = FastAPI()
 APP.add_middleware(
@@ -26,46 +14,33 @@ APP.add_middleware(
     allow_headers = ['*']
 )
 LLM = Llama(
-    model_path="./model/qwen2.5_merged-q4_k_m.gguf", 
+    model_path="./models/capstone-q4-k-m.gguf", 
     n_ctx = 4096, 
-    n_gpu_layers= -1
+    n_gpu_layers= 24,
+    verbose = True, 
+    chat_format= 'qwen2'
 )
+
 @APP.get("/")
 def health():
     return {"status":"ok"}
 
 @APP.post("/ai/ask", response_model=askResponse)
 async def ask(req: askRequest):
-    pipeline = LLM(
-        req.text, max_tokens = 512, temperature= 0.5, top_p = 0.9
-        ); answer = pipeline['choices'][0]['text'].strip()
-    return askResponse(text = answer)
+    PROMPT = bbobbi_prompt(req.userid, req.text)
+    out = LLM.create_chat_completion(
+        messages=[{"role": "system", 'content': PROMPT},
+            {"role": "user", "content": req.text}],
+        temperature=0.3,
+        top_p=0.9,
+        max_tokens=512,
+        stop = ["<|im_end|>"],
+    )
+    answer = out["choices"][0]["message"]["content"].strip()
+    print("RAW:", repr(req.text))
+    print(type(out))
+    print(out)
+    print(type(answer))
+    print(answer[:200])
 
-@APP.get("/ai/info")
-def getinfo(userid: int, species: str, name: str, age: int, disease: str):
-    conn = threadUpdate()
-    cursor = conn.cursor()
-    cursor.execute('''
-    INSERT INTO userinfo (userid, species, name, age, disease) VALUES (?, ?, ?, ?, ?)''', (userid, species, name, age, disease)); conn.commit(); conn.close()
-
-    return {'user': userid, 'species': species, 'name': name, 'age': age, 'disease': disease}
-
-@APP.get('/ai/findname')
-def findbydogname(name: str):
-    conn = threadUpdate()
-    cursor = conn.cursor()
-
-    cursor.execute('SELECT userid, species, name, age, disease FROM userinfo WHERE name = ?', (name,))
-    row = cursor.fetchone()
-    conn.close()
-
-    if row is None:
-        return {'status': 'Not Found'}
-    
-    return {
-        "userid": row[0], 
-        'species': row[1],
-        'name': row[2],
-        'age': row[3],
-        'disease': row[4]
-    }
+    return askResponse(userid=req.userid, text=answer)
