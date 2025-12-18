@@ -1,11 +1,24 @@
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from utils.ask import askRequest, askResponse
 from utils.threadupdate import threadUpdate
 from prompt.prompt import bbobbi_prompt
 from llama_cpp import Llama
+import os
 
-APP = FastAPI()
+LLM = None
+@asynccontextmanager
+async def lifesp(APP = FastAPI):
+    global LLM
+    MODEL_PATH = os.getenv("MODEL_PATH")
+    if not MODEL_PATH: raise RuntimeError("모델 경로 환경변수 없는듯")
+    LLM = Llama(model_path=MODEL_PATH, n_ctx = 4096, n_gpu_layers=24, verbose = True, chat_format = 'qwen2')
+    yield
+
+    LLM = None
+
+APP = FastAPI(lifespan=lifesp)
 APP.add_middleware(
     CORSMiddleware,
     allow_origins= ["*"],
@@ -13,21 +26,13 @@ APP.add_middleware(
     allow_methods = ['*'],
     allow_headers = ['*']
 )
-LLM = Llama(
-    model_path="./models/capstone-q4-k-m.gguf", 
-    n_ctx = 4096, 
-    n_gpu_layers= 24,
-    verbose = True, 
-    chat_format= 'qwen2'
-)
-
 @APP.get("/")
 def health():
     return {"status":"ok"}
 
 @APP.post("/ai/ask", response_model=askResponse)
-async def ask(req: askRequest):
-    PROMPT = bbobbi_prompt(req.userid, req.text)
+async def ask(req):
+    PROMPT = bbobbi_prompt(req.text)
     out = LLM.create_chat_completion(
         messages=[{"role": "system", 'content': PROMPT},
             {"role": "user", "content": req.text}],
